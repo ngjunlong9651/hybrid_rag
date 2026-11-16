@@ -43,7 +43,27 @@ Combining them typically lifts recall noticeably (one guide cites roughly 65-78%
 5. Add a cross-encoder reranker and measure the gain.
 6. Build a small eval set and compare configurations.
 
-## 6. Resources
+## 6. How to improve the system (from notebook section 10, measured on SciFact)
+Order of work: **measure, then quality, then latency, then cost**. Change one thing at a time and keep it only if the numbers move.
+
+| Lever | What I measured | Lesson |
+|---|---|---|
+| Confidence intervals | 14 toy queries: BM25 MRR interval 0.63 to 0.95 | Small test sets cannot separate systems |
+| Real benchmark (SciFact) | BM25 0.643, dense 0.648, hybrid RRF 0.674 nDCG@10 | Hybrid beats both only on realistic data |
+| Stemming (digits left alone) | hybrid 0.674 to 0.705 | Cheapest big win for BM25 |
+| Alpha tuned on train, reported on test | 0.718 | Tune on train, report on test |
+| Contextual chunks | vague chunk MRR 0.04 to 1.0 | Fix the chunk, not the fusion |
+| Query routing | tied a simply tuned alpha | Try the tuned simple baseline first |
+| MS MARCO cross-encoder reranker | made SciFact worse, about 20 ms per candidate | Domain mismatch; always measure the reranker |
+| Sparse-matrix BM25 | more than 100x faster than a Python loop, same scores | Precompute at index time |
+| Semantic cache | a wrong question scored above a true paraphrase | No safe threshold; measure false hits |
+| Context budget | recall knee at about 3 to 5 chunks | Better ranking is a cost lever |
+| int8 / binary + rescore | int8 free at 4x smaller; binary + rescore near-lossless at 32x | Quantize; rescore a shortlist |
+| IVF nprobe | 95% of exact top 10 at 27% scanned (5k docs) | Measure ANN recall against exact search |
+
+Rule of thumb for latency and cost: the LLM usually dominates, then the reranker; retrieval and fusion are cheap.
+
+## 7. Resources
 Overviews and tutorials
 - [Hybrid Search for RAG: Combining BM25 and Dense Vector Search (denser.ai)](https://denser.ai/blog/hybrid-search-for-rag/)
 - [Implementing Hybrid Semantic + Lexical Search in RAG (Machine Learning Mastery)](https://machinelearningmastery.com/implementing-hybrid-semantic-lexical-search-in-rag/)

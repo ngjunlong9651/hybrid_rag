@@ -50,13 +50,15 @@ class HybridRetriever:
     def bm25_ranking(self, query: str) -> list[int]:
         scores = self.bm25.get_scores(tokenize(query))
         # argsort is ascending, so negate to get best-first. Returns document positions.
-        return list(np.argsort(-scores))
+        # Keep only docs that matched at least one query term (score > 0). Docs scoring 0 are in an
+        # arbitrary order, and letting them into RRF adds noise (see section 5 of the notebook).
+        return [int(i) for i in np.argsort(-scores) if scores[i] > 0]
 
     def dense_ranking(self, query: str) -> list[int]:
         # Encode the query with the SAME model used for documents (mixing models breaks the geometry).
         q = self.model.encode([query], normalize_embeddings=True)[0]
         # One matrix-vector product scores all documents at once.
-        return list(np.argsort(-(self.doc_vecs @ q)))
+        return [int(i) for i in np.argsort(-(self.doc_vecs @ q))]
 
     @staticmethod
     def rrf(rankings: list[list[int]], k: int = RRF_K) -> list[tuple[int, float]]:

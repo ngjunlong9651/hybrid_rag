@@ -3,4 +3,7 @@ sentence-transformers
 numpy
 pandas
 matplotlib
+scipy
+scikit-learn
+nltk
 ipykernel
